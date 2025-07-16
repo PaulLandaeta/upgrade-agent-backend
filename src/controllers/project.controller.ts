@@ -66,6 +66,7 @@ export const getProjectInfo = (req: Request, res: Response) => {
   }
 };
 
+//this need to be improved with AI
 export const getWarnings = (req: Request, res: Response) => {
   const { path: projectPath } = req.query;
   if (!projectPath || typeof projectPath !== "string")
@@ -116,11 +117,9 @@ export const applySuggestion = (req: Request, res: Response) => {
   const { filePath, codeUpdated } = req.body;
 
   if (!filePath || !codeUpdated) {
-    return res
-      .status(400)
-      .json({
-        error: "Missing required parameters: filePath and codeUpdated.",
-      });
+    return res.status(400).json({
+      error: "Missing required parameters: filePath and codeUpdated.",
+    });
   }
 
   try {
@@ -198,5 +197,36 @@ export const restoreBackup = (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ error: "Failed to restore the file.", details: error });
+  }
+};
+
+export const getFileContent = (req: Request, res: Response) => {
+  console.log("getFileContent called with query:", req.query);
+  const { path: projectPath, file } = req.query;
+
+  if (
+    !projectPath ||
+    !file ||
+    typeof projectPath !== "string" ||
+    typeof file !== "string"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Missing required query params: 'path' and 'file'" });
+  }
+  //TODO: get file path from the other controller instead /src/app/
+  const fullPath = path.join(`${projectPath}/src/app/`, file);
+  console.log("Full path to file:", fullPath);
+  try {
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: "File not found." });
+    }
+
+    const code = fs.readFileSync(fullPath, "utf8");
+    return res.status(200).json({ code });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Failed to read file content.", details: error });
   }
 };

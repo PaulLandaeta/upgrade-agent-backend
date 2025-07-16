@@ -9,5 +9,7 @@ router.get("/warnings", projectController.getWarnings);
 router.post("/apply-suggestion", projectController.applySuggestion);
 router.get("/backups", projectController.listBackups);
 router.post("/restore-backup", projectController.restoreBackup);
+router.get("/file", projectController.getFileContent);
+
 
 export default router;

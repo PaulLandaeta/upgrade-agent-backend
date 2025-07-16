@@ -5,7 +5,7 @@ export async function getMigrationSuggestion(
   fileName: string,
   code: string,
   warning: string
-): Promise<{ codeUpdated: string; explanation: string }> {
+): Promise<{ codeUpdated: string; explanation: string; suggestedPrompt: string }> {
   const prompt = buildMigrationPrompt(fileName, code, warning);
 
   const response = await openai.chat.completions.create({
@@ -23,6 +23,7 @@ export async function getMigrationSuggestion(
     return {
       codeUpdated: parsed.codeUpdated || "",
       explanation: parsed.explanation || "",
+      suggestedPrompt: parsed.suggestedPrompt || "",
     };
   } catch (err) {
     throw new Error("Unable to parse OpenAI response as valid JSON.");

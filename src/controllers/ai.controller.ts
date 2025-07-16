@@ -9,8 +9,8 @@ export const suggestMigration = async (req: Request, res: Response) => {
   }
 
   try {
-    const { codeUpdated, explanation } = await getMigrationSuggestion(fileName, code, warning);
-    return res.status(200).json({ codeUpdated, explanation });
+    const { codeUpdated, explanation, suggestedPrompt } = await getMigrationSuggestion(fileName, code, warning);
+    return res.status(200).json({ codeUpdated, explanation, suggestedPrompt });
   } catch (error) {
     console.error('Error al consultar OpenAI:', error);
     return res.status(500).json({ error: 'Error al consultar OpenAI.', details: error });
