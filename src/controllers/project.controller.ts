@@ -1,7 +1,12 @@
 import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
+import { exec } from "child_process";
 import { Request, Response } from "express";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
+const BASE_DIR = path.resolve("projects");
 
 export const uploadProject = (req: Request, res: Response) => {
   if (!req.file) return res.status(400).send("No file was uploaded.");
@@ -114,7 +119,7 @@ export const getWarnings = (req: Request, res: Response) => {
 };
 
 export const applySuggestion = (req: Request, res: Response) => {
-  const { filePath, codeUpdated } = req.body;
+  let { filePath, codeUpdated, fileName } = req.body;
 
   if (!filePath || !codeUpdated) {
     return res.status(400).json({
@@ -126,7 +131,7 @@ export const applySuggestion = (req: Request, res: Response) => {
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "File does not exist." });
     }
-
+    filePath = `${filePath}/rpp-ng-recon-admin/src/app/${fileName}`
     const backupPath = `${filePath}.bak`;
     fs.copyFileSync(filePath, backupPath);
     fs.writeFileSync(filePath, codeUpdated, "utf8");
@@ -215,7 +220,7 @@ export const getFileContent = (req: Request, res: Response) => {
       .json({ error: "Missing required query params: 'path' and 'file'" });
   }
   //TODO: get file path from the other controller instead /src/app/
-  const fullPath = path.join(`${projectPath}/src/app/`, file);
+  const fullPath = path.join(`${projectPath}/rpp-ng-recon-admin/src/app/`, file);
   console.log("Full path to file:", fullPath);
   try {
     if (!fs.existsSync(fullPath)) {
@@ -228,5 +233,37 @@ export const getFileContent = (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ error: "Failed to read file content.", details: error });
+  }
+};
+
+
+export const verifyBuild = async (req: Request, res: Response) => {
+  const { path: relativePath } = req.body;
+
+  if (!relativePath) {
+    return res.status(400).json({ error: "Missing project path" });
+  }
+
+  const fullPath = path.resolve(BASE_DIR, relativePath);
+
+  if (!fullPath.startsWith(BASE_DIR)) {
+    return res.status(403).json({ error: "Invalid project path" });
+  }
+
+  try {
+    const { stdout, stderr } = await execAsync("npm run build", {
+      cwd: fullPath,
+      timeout: 60000,
+    });
+
+    return res.json({
+      success: true,
+      output: stdout + stderr,
+    });
+  } catch (err: any) {
+    return res.json({
+      success: false,
+      output: err.stdout + err.stderr || err.message,
+    });
   }
 };
