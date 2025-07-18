@@ -1,0 +1,65 @@
+[
+  {
+    "title": "Use of @angular/http",
+    "reason": "Deprecated since Angular 5, removed in later versions.",
+    "fileTypes": [".ts"],
+    "pattern": "@angular/http",
+    "recommendation": "Replace with @angular/common/http"
+  },
+  {
+    "title": "Legacy Http usage",
+    "reason": "Angular recommends using HttpClient instead of the old Http module.",
+    "fileTypes": [".ts"],
+    "pattern": "Http",
+    "recommendation": "Use HttpClient from @angular/common/http"
+  },
+  {
+    "title": "RxJS map operator usage",
+    "reason": "Deprecated in favor of pipeable operators.",
+    "fileTypes": [".ts"],
+    "pattern": "\\.map\\(",
+    "recommendation": "Use map from 'rxjs/operators' inside a pipe"
+  },
+  {
+    "title": "Removal of <template> tag",
+    "reason": "Replaced with <ng-template> to follow Angular naming conventions.",
+    "fileTypes": [".html"],
+    "pattern": "<template>",
+    "recommendation": "Replace <template> with <ng-template>"
+  },
+  {
+    "title": "Static flag in ViewChild / ContentChild",
+    "reason": "In Angular 8, static flag is mandatory.",
+    "fileTypes": [".ts"],
+    "pattern": "@ViewChild\\([^)]*\\)\\s+\\w+;",
+    "recommendation": "Add static flag: @ViewChild('ref', { static: false }) ref;"
+  },
+  {
+    "title": "DOCUMENT import from platform-browser",
+    "reason": "DOCUMENT token moved to @angular/common.",
+    "fileTypes": [".ts"],
+    "pattern": "import { DOCUMENT } from '@angular/platform-browser';",
+    "recommendation": "Replace with import { DOCUMENT } from '@angular/common';"
+  },
+  {
+    "title": "Use of Renderer",
+    "reason": "Renderer is replaced by Renderer2.",
+    "fileTypes": [".ts"],
+    "pattern": "import { Renderer } from '@angular/core';",
+    "recommendation": "Use Renderer2 instead"
+  },
+  {
+    "title": "HttpModule import",
+    "reason": "HttpModule replaced with HttpClientModule.",
+    "fileTypes": [".ts"],
+    "pattern": "import { HttpModule } from '@angular/http';",
+    "recommendation": "Replace with import { HttpClientModule } from '@angular/common/http';"
+  },
+  {
+    "title": "Use of <ngForm>",
+    "reason": "Renamed to kebab-case for consistency.",
+    "fileTypes": [".html"],
+    "pattern": "<ngForm>",
+    "recommendation": "Replace <ngForm> with <ng-form>"
+  }
+]

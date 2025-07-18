@@ -4,6 +4,7 @@ import AdmZip from "adm-zip";
 import { exec } from "child_process";
 import { Request, Response } from "express";
 import { promisify } from "util";
+import { fetchMigrationRules } from "../services/ai.service";
 
 const execAsync = promisify(exec);
 const BASE_DIR = path.resolve("projects");
@@ -72,37 +73,106 @@ export const getProjectInfo = (req: Request, res: Response) => {
 };
 
 //this need to be improved with AI
-export const getWarnings = (req: Request, res: Response) => {
-  const { path: projectPath } = req.query;
-  if (!projectPath || typeof projectPath !== "string")
-    return res.status(400).send("Missing 'path' parameter.");
+// export const getWarnings = (req: Request, res: Response) => {
+//   const { path: projectPath } = req.query;
+//   if (!projectPath || typeof projectPath !== "string")
+//     return res.status(400).send("Missing 'path' parameter.");
 
-  const warnings: string[] = [];
+//   const warnings: string[] = [];
+
+//   const scanFiles = (dir: string) => {
+//     const entries = fs.readdirSync(dir, { withFileTypes: true });
+//     for (const entry of entries) {
+//       const fullPath = path.join(dir, entry.name);
+//       if (entry.isDirectory()) {
+//         scanFiles(fullPath);
+//       } else if (
+//         entry.isFile() &&
+//         (entry.name.endsWith(".ts") || entry.name.endsWith(".html"))
+//       ) {
+//         const content = fs.readFileSync(fullPath, "utf8");
+
+//         if (content.includes("@angular/http")) {
+//           warnings.push(
+//             `[${entry.name}] Uses @angular/http (deprecated since Angular 5)`
+//           );
+//         }
+//         if (content.includes("Http")) {
+//           warnings.push(
+//             `[${entry.name}] Possible legacy Http usage (should use HttpClient)`
+//           );
+//         }
+//         if (content.match(/\.map\(/)) {
+//           warnings.push(`[${entry.name}] Uses deprecated RxJS .map operator`);
+//         }
+//       }
+//     }
+//   };
+
+//   try {
+//     scanFiles(projectPath);
+//     return res.status(200).json({ warnings });
+//   } catch (error) {
+//     return res
+//       .status(500)
+//       .json({ error: "Error scanning the project.", details: error });
+//   }
+// };
+
+const cacheRules = async (from: number, to: number) => {
+  const rulesPath = path.resolve(__dirname, `../rules/a${from}-to-a${to}.json`);
+
+  if (!fs.existsSync(rulesPath)) {
+    const rules = await fetchMigrationRules(from, to);
+    fs.writeFileSync(rulesPath, JSON.stringify(rules, null, 2), "utf8");
+  }
+
+  return JSON.parse(fs.readFileSync(rulesPath, "utf8"));
+};
+
+type Warning = {
+  filePath: string;
+  description: string;
+};
+
+export const getWarnings = async (req: Request, res: Response) => {
+  const { path: projectPath, from, to } = req.query;
+  if (!projectPath || typeof projectPath !== "string") {
+    return res.status(400).send("Missing 'path' parameter.");
+  }
+  if (!from || !to) {
+    return res.status(400).send("Missing 'from' or 'to' Angular version.");
+  }
+
+  const rules = await cacheRules(Number(from), Number(to));
+  const warnings: Warning[] = [];
 
   const scanFiles = (dir: string) => {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
+      console.log(`Scanning: ${fullPath}`);
+
       if (entry.isDirectory()) {
         scanFiles(fullPath);
-      } else if (
-        entry.isFile() &&
-        (entry.name.endsWith(".ts") || entry.name.endsWith(".html"))
-      ) {
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name);
         const content = fs.readFileSync(fullPath, "utf8");
 
-        if (content.includes("@angular/http")) {
-          warnings.push(
-            `[${entry.name}] Uses @angular/http (deprecated since Angular 5)`
-          );
-        }
-        if (content.includes("Http")) {
-          warnings.push(
-            `[${entry.name}] Possible legacy Http usage (should use HttpClient)`
-          );
-        }
-        if (content.match(/\.map\(/)) {
-          warnings.push(`[${entry.name}] Uses deprecated RxJS .map operator`);
+        for (const rule of rules) {
+          console.log(`Checking rule: ${rule.title} for file: ${fullPath}`);
+          if (!rule.fileTypes.includes(ext)) continue;
+
+          const regex = new RegExp(rule.pattern, "g");
+          const matches = content.match(regex);
+          console.log(`Matches for rule "${rule.title}":`, matches);
+          if (matches && matches.length > 0) {
+            warnings.push({
+              filePath: fullPath.replace(projectPath, ""),
+              description: `${rule.title}: ${rule.recommendation}`,
+            });
+          }
         }
       }
     }
@@ -131,7 +201,7 @@ export const applySuggestion = (req: Request, res: Response) => {
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "File does not exist." });
     }
-    filePath = `${filePath}/rpp-ng-recon-admin/src/app/${fileName}`
+    filePath = `${filePath}/rpp-ng-recon-admin/src/app/${fileName}`;
     const backupPath = `${filePath}.bak`;
     fs.copyFileSync(filePath, backupPath);
     fs.writeFileSync(filePath, codeUpdated, "utf8");
@@ -220,7 +290,10 @@ export const getFileContent = (req: Request, res: Response) => {
       .json({ error: "Missing required query params: 'path' and 'file'" });
   }
   //TODO: get file path from the other controller instead /src/app/
-  const fullPath = path.join(`${projectPath}/rpp-ng-recon-admin/src/app/`, file);
+  const fullPath = path.join(
+    `${projectPath}/rpp-ng-recon-admin/src/app/`,
+    file
+  );
   console.log("Full path to file:", fullPath);
   try {
     if (!fs.existsSync(fullPath)) {
@@ -235,7 +308,6 @@ export const getFileContent = (req: Request, res: Response) => {
       .json({ error: "Failed to read file content.", details: error });
   }
 };
-
 
 export const verifyBuild = async (req: Request, res: Response) => {
   const { path: relativePath } = req.body;

@@ -1,0 +1,65 @@
+[
+  {
+    "title": "View Engine is deprecated",
+    "reason": "Angular 9 introduced Ivy as the new default compiler and runtime",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "enableIvy: false",
+    "recommendation": "Remove the 'enableIvy' option from your tsconfig.json file to enable Ivy by default"
+  },
+  {
+    "title": "Removal of <ngForm>",
+    "reason": "This was deprecated in Angular 6 and removed in Angular 9",
+    "fileTypes": [
+      ".html"
+    ],
+    "pattern": "<ngForm>",
+    "recommendation": "Replace <ngForm> with <ng-form>"
+  },
+  {
+    "title": "Removal of 'CollectionChangeRecord' and 'DefaultIterableDiffer'",
+    "reason": "These were deprecated in Angular 4 and removed in Angular 9",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "CollectionChangeRecord|DefaultIterableDiffer",
+    "recommendation": "Use 'IterableChangeRecord' and 'IterableDiffer' instead"
+  },
+  {
+    "title": "Removal of 'Renderer'",
+    "reason": "This was deprecated in Angular 4 and removed in Angular 9",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "Renderer",
+    "recommendation": "Use 'Renderer2' instead"
+  },
+  {
+    "title": "Removal of 'preserveWhitespaces' option",
+    "reason": "This was deprecated in Angular 8 and removed in Angular 9",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "preserveWhitespaces",
+    "recommendation": "Remove this option from your component decorators"
+  },
+  {
+    "title": "Removal of 'entryComponents'",
+    "reason": "With Ivy, this is no longer necessary",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "entryComponents",
+    "recommendation": "Remove 'entryComponents' from your NgModule declarations"
+  },
+  {
+    "title": "Removal of 'loadChildren' string syntax",
+    "reason": "This was deprecated in Angular 8 and removed in Angular 9",
+    "fileTypes": [
+      ".ts"
+    ],
+    "pattern": "loadChildren: string",
+    "recommendation": "Use the import() syntax for lazy loading instead"
+  }
+]
