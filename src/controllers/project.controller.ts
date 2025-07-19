@@ -9,6 +9,33 @@ import { fetchMigrationRules } from "../services/ai.service";
 const execAsync = promisify(exec);
 const BASE_DIR = path.resolve("projects");
 
+export const listProjects = (req: Request, res: Response) => {
+  try {
+    const projectIds = fs
+      .readdirSync(BASE_DIR, { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name);
+
+    const projects = projectIds.map((id) => {
+      const fullPath = path.join(BASE_DIR, id);
+      const subfolders = fs
+        .readdirSync(fullPath, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
+
+      return {
+        id,
+        originalFolder: subfolders[0] || "unknown",
+      };
+    });
+
+    return res.status(200).json(projects);
+  } catch (error) {
+    console.error("Error reading project folders:", error);
+    return res.status(500).json({ error: "Unable to read project list." });
+  }
+};
+
 export const uploadProject = (req: Request, res: Response) => {
   if (!req.file) return res.status(400).send("No file was uploaded.");
 
@@ -20,6 +47,12 @@ export const uploadProject = (req: Request, res: Response) => {
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(extractPath, true);
     fs.unlinkSync(zipPath);
+
+    const macosxPath = path.join(extractPath, "__MACOSX");
+    if (fs.existsSync(macosxPath)) {
+      fs.rmSync(macosxPath, { recursive: true, force: true });
+      console.log("Removed __MACOSX folder");
+    }
 
     return res.status(200).json({
       message: "Project successfully extracted.",
@@ -152,7 +185,6 @@ export const getWarnings = async (req: Request, res: Response) => {
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      console.log(`Scanning: ${fullPath}`);
 
       if (entry.isDirectory()) {
         scanFiles(fullPath);
@@ -161,12 +193,10 @@ export const getWarnings = async (req: Request, res: Response) => {
         const content = fs.readFileSync(fullPath, "utf8");
 
         for (const rule of rules) {
-          console.log(`Checking rule: ${rule.title} for file: ${fullPath}`);
           if (!rule.fileTypes.includes(ext)) continue;
-
           const regex = new RegExp(rule.pattern, "g");
           const matches = content.match(regex);
-          console.log(`Matches for rule "${rule.title}":`, matches);
+
           if (matches && matches.length > 0) {
             warnings.push({
               filePath: fullPath.replace(projectPath, ""),

@@ -11,5 +11,6 @@ router.get("/backups", projectController.listBackups);
 router.post("/restore-backup", projectController.restoreBackup);
 router.get("/file", projectController.getFileContent);
 router.post("/build", projectController.verifyBuild);
+router.get("/list", projectController.listProjects);
 
 export default router;
