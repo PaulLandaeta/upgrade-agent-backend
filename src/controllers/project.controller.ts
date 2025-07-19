@@ -320,10 +320,7 @@ export const getFileContent = (req: Request, res: Response) => {
       .json({ error: "Missing required query params: 'path' and 'file'" });
   }
   //TODO: get file path from the other controller instead /src/app/
-  const fullPath = path.join(
-    `${projectPath}/rpp-ng-recon-admin/src/app/`,
-    file
-  );
+  const fullPath = path.join(`${projectPath}`);
   console.log("Full path to file:", fullPath);
   try {
     if (!fs.existsSync(fullPath)) {
