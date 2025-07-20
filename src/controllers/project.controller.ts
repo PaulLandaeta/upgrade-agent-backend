@@ -368,11 +368,35 @@ export const verifyBuild = async (req: Request, res: Response) => {
 };
 
 export async function auditDependencies(req: Request, res: Response) {
-  const { path: projectPath } = req.body;
+  const { path: relativeProjectPath } = req.body;
+  const parentPath = path.resolve(__dirname, "../..", relativeProjectPath);
 
-  const fullPath = path.resolve(projectPath);
+  console.log("Parent path:", parentPath);
 
-  exec("npm audit --json", { cwd: fullPath }, async (err, stdout) => {
+  const subdirs = fs
+    .readdirSync(parentPath, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+
+  if (subdirs.length !== 1) {
+    return res
+      .status(400)
+      .json({ error: "Expected exactly one project folder inside path" });
+  }
+
+  const fullPath = path.join(parentPath, subdirs[0]);
+  console.log("Resolved audit path:", fullPath);
+
+  const auditCommand = `
+    bash -c "
+      source ~/.nvm/nvm.sh &&
+      nvm use 14 > /dev/null &&
+      cd '${fullPath}' &&
+      npm audit --json
+    "
+  `;
+
+  exec(auditCommand, async (err, stdout) => {
     if (err && !stdout) {
       return res
         .status(500)
@@ -380,23 +404,27 @@ export async function auditDependencies(req: Request, res: Response) {
     }
 
     try {
-      const auditReport = JSON.parse(stdout);
-      const vulnerabilities = auditReport.vulnerabilities || {};
-      const entries = Object.entries(vulnerabilities).slice(0, 5);
+      const jsonStart = stdout.indexOf("{");
+      if (jsonStart === -1) throw new Error("Invalid JSON output");
+      console.log("Raw JSON output:", stdout);
+      const cleanJson = stdout.slice(jsonStart);
+      console.log("Clean JSON:", cleanJson);
+      const auditReport = JSON.parse(cleanJson);
+      console.log("Audit report:", auditReport);
 
-      const alerts = entries.map(([pkgName, vuln]: [string, any]) => ({
-        module: pkgName,
-        vulnerable_versions: vuln.range || "N/A",
+      if (auditReport.error) {
+        return res.status(500).json({ error: auditReport.error.summary });
+      }
+
+      const advisories = Object.values(auditReport.advisories || {}) as any[];
+
+      const alerts = advisories.map((vuln) => ({
+        module: vuln.module_name,
+        vulnerable_versions: vuln.vulnerable_versions || "N/A",
         severity: vuln.severity || "unknown",
-        recommendation: vuln.fixAvailable
-          ? typeof vuln.fixAvailable === "object"
-            ? `Upgrade to ${vuln.fixAvailable.name}@${vuln.fixAvailable.version}`
-            : "Upgrade to a safe version"
-          : "No fix available",
-        title:
-          Array.isArray(vuln.via) && vuln.via.length > 0
-            ? vuln.via[0].title || `Vulnerability in ${pkgName}`
-            : `Vulnerability in ${pkgName}`,
+        recommendation: vuln.recommendation || "No fix available",
+        title: vuln.title || `Vulnerability in ${vuln.module_name}`,
+        url: vuln.url || "",
       }));
 
       res.json({ alerts });
