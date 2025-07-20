@@ -428,3 +428,27 @@ export async function listAngularModules(req: Request, res: Response) {
     return res.status(500).json({ error: "Failed to list Angular modules" });
   }
 }
+
+export const createProject = (req: Request, res: Response) => {
+  const { projectName, fileList } = req.body;
+
+  if (!projectName || !Array.isArray(fileList)) {
+    return res.status(400).json({ error: "Invalid project data." });
+  }
+
+  const projectPath = path.join(BASE_DIR, projectName);
+
+  try {
+    fs.mkdirSync(projectPath, { recursive: true });
+    fileList.forEach((file) => {
+      const filePath = path.join(projectPath, file.name);
+      fs.writeFileSync(filePath, file.content, "utf8");
+    });
+
+    return res.status(201).json({ message: "Project created successfully." });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Failed to create project.", details: error });
+  }
+};
