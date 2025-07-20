@@ -1,6 +1,7 @@
 import openai from "../config/openai";
 import { buildMigrationPrompt } from "../prompts/migrationPrompt";
 import { getMigrationRulesPrompt } from "../prompts/upgradePrompt";
+import { buildAuditFixPrompt } from "../prompts/auditPrompt";
 
 export async function getMigrationSuggestion(
   fileName: string,
@@ -56,4 +57,18 @@ export async function fetchMigrationRules(
   } catch (err) {
     throw new Error("Invalid JSON response from AI");
   }
+}
+
+export async function getAuditFixSuggestionService(dep: string, advisory: string) {
+  const prompt = buildAuditFixPrompt(dep, advisory);
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: "You are a Node.js security expert" },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.2,
+  });
+
+  return JSON.parse(response.choices[0].message?.content || "{}");
 }

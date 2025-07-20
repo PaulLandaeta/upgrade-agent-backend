@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   fetchMigrationRules,
+  getAuditFixSuggestionService,
   getMigrationSuggestion,
 } from "../services/ai.service";
 
@@ -40,5 +41,20 @@ export const getMigrationRules = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: "Failed to fetch migration rules", details: error });
+  }
+};
+
+export const getAuditFixSuggestion = async (req: Request, res: Response ) => {
+  const { module, title } = req.body;
+
+  if (!module || !title) {
+    return res.status(400).json({ error: "Missing module or title" });
+  }
+
+  try {
+    const fix = await getAuditFixSuggestionService(module, title);
+    res.json(fix);
+  } catch (err) {
+    res.status(500).json({ error: "AI failed to suggest a fix" });
   }
 };

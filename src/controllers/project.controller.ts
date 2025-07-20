@@ -231,7 +231,7 @@ export const applySuggestion = (req: Request, res: Response) => {
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "File does not exist." });
     }
-    filePath = `${filePath}/rpp-ng-recon-admin/src/app/${fileName}`;
+    filePath = `${filePath}`;
     const backupPath = `${filePath}.bak`;
     fs.copyFileSync(filePath, backupPath);
     fs.writeFileSync(filePath, codeUpdated, "utf8");
@@ -366,3 +366,39 @@ export const verifyBuild = async (req: Request, res: Response) => {
     });
   }
 };
+
+export async function auditDependencies(req: Request, res: Response) {
+  const { path: projectPath } = req.body;
+
+  const fullPath = path.resolve(projectPath);
+
+  exec("npm audit --json", { cwd: fullPath }, async (err, stdout) => {
+    if (err && !stdout) {
+      return res.status(500).json({ error: "Audit failed or project not found" });
+    }
+
+    try {
+      const auditReport = JSON.parse(stdout);
+      const vulnerabilities = auditReport.vulnerabilities || {};
+      const entries = Object.entries(vulnerabilities).slice(0, 5);
+
+      const alerts = entries.map(([pkgName, vuln]: [string, any]) => ({
+        module: pkgName,
+        vulnerable_versions: vuln.range || "N/A",
+        severity: vuln.severity || "unknown",
+        recommendation: vuln.fixAvailable
+          ? typeof vuln.fixAvailable === "object"
+            ? `Upgrade to ${vuln.fixAvailable.name}@${vuln.fixAvailable.version}`
+            : "Upgrade to a safe version"
+          : "No fix available",
+        title: Array.isArray(vuln.via) && vuln.via.length > 0
+          ? vuln.via[0].title || `Vulnerability in ${pkgName}`
+          : `Vulnerability in ${pkgName}`,
+      }));
+
+      res.json({ alerts });
+    } catch (parseError) {
+      res.status(500).json({ error: "Failed to parse audit result" });
+    }
+  });
+}
