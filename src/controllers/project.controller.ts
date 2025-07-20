@@ -374,7 +374,9 @@ export async function auditDependencies(req: Request, res: Response) {
 
   exec("npm audit --json", { cwd: fullPath }, async (err, stdout) => {
     if (err && !stdout) {
-      return res.status(500).json({ error: "Audit failed or project not found" });
+      return res
+        .status(500)
+        .json({ error: "Audit failed or project not found" });
     }
 
     try {
@@ -391,9 +393,10 @@ export async function auditDependencies(req: Request, res: Response) {
             ? `Upgrade to ${vuln.fixAvailable.name}@${vuln.fixAvailable.version}`
             : "Upgrade to a safe version"
           : "No fix available",
-        title: Array.isArray(vuln.via) && vuln.via.length > 0
-          ? vuln.via[0].title || `Vulnerability in ${pkgName}`
-          : `Vulnerability in ${pkgName}`,
+        title:
+          Array.isArray(vuln.via) && vuln.via.length > 0
+            ? vuln.via[0].title || `Vulnerability in ${pkgName}`
+            : `Vulnerability in ${pkgName}`,
       }));
 
       res.json({ alerts });
@@ -401,4 +404,27 @@ export async function auditDependencies(req: Request, res: Response) {
       res.status(500).json({ error: "Failed to parse audit result" });
     }
   });
+}
+
+export async function listAngularModules(req: Request, res: Response) {
+  const projectPath = req.query.path as string;
+
+  if (!projectPath) {
+    return res.status(400).json({ error: "Missing project path" });
+  }
+
+  const modulesDir = path.join(projectPath, "src", "app");
+
+  try {
+    const entries = fs.readdirSync(modulesDir, { withFileTypes: true });
+
+    const folders = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+    return res.json({ modules: folders });
+  } catch (err) {
+    console.error("Error reading modules:", err);
+    return res.status(500).json({ error: "Failed to list Angular modules" });
+  }
 }
