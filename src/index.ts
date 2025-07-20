@@ -6,6 +6,7 @@ import AdmZip from "adm-zip";
 import { exec } from "child_process";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import {suggestFrameworkMigration} from "./controllers/ai.controller";
 
 dotenv.config();
 
@@ -277,3 +278,5 @@ app.post("/api/project/restore-backup", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
+
+app.post("/api/ai/framework-migration", suggestFrameworkMigration);

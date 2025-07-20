@@ -14,5 +14,6 @@ router.post("/build", projectController.verifyBuild);
 router.get("/list", projectController.listProjects);
 router.post("/audit", projectController.auditDependencies);
 router.get("/angular-modules", projectController.listAngularModules);
+router.post("/create-project", projectController.createProject);
 
 export default router;
