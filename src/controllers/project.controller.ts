@@ -11,11 +11,12 @@ const BASE_DIR = path.resolve("projects");
 
 export const listProjects = (req: Request, res: Response) => {
   try {
+    console.log("Listing projects in base directory:", BASE_DIR);
     const projectIds = fs
       .readdirSync(BASE_DIR, { withFileTypes: true })
       .filter((dirent) => dirent.isDirectory())
       .map((dirent) => dirent.name);
-
+    console.log("Found project IDs:", projectIds);
     const projects = projectIds.map((id) => {
       const fullPath = path.join(BASE_DIR, id);
       const subfolders = fs
